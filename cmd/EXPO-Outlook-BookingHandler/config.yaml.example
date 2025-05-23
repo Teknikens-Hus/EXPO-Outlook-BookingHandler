@@ -1,0 +1,33 @@
+ICS:
+  Calendars:
+    - Name: "Calendar1"
+      URL: "https://outlook.office365.com/owa/calendar/../calendar.ics"
+    - Name: "Calendar2"
+      URL: "https://outlook.office365.com/owa/calendar/.../calendar.ics"
+    - Name: "Calendar3"
+      URL: "https://outlook.office365.com/owa/calendar/.../calendar.ics"
+
+ResourceMap:
+  - Name: "Calendar1"
+    LinkedCalName: "Room1"
+    EXPOResourceName: "Room1"
+  - Name: "Calendar2"
+    LinkedCalName: "Room2"
+    EXPOResourceName: "Room2"
+  - Name: "Calendar3"
+    LinkedCalName: "Room2"
+    EXPOResourceName: "Room 2"
+
+Email:
+  FallbackEmail:
+    Address: "mail@mail.com"
+    Name: "fallback mail"
+  From:
+    Address: "no-reply@mail.com"
+    Name: "it-department"
+  Subject: "EXPO Booking Conflict"
+  Mappings:
+    - icsSummary: "Bob Bobson"
+      address: "bob.bobson@mail.com"
+    - icsSummary: "Foo Bar"
+      address: "foo.bar@mail.com"
