@@ -7,6 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY cmd/ ./cmd/
+COPY internal/ ./internal/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -C /app/cmd/EXPO-Outlook-BookingHandler -o /EXPO-Outlook-BookingHandler
 
@@ -17,17 +18,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -C /app/cmd/EXPO-Outlook-BookingHandler -o
 # Deploy the application binary into a lean image
 FROM alpine:latest AS build-release-stage
 
-WORKDIR /
+WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy binary
-COPY --from=build-stage /EXPO-Outlook-BookingHandler /EXPO-Outlook-BookingHandler
+COPY --from=build-stage /EXPO-Outlook-BookingHandler ./EXPO-Outlook-BookingHandler
 # Copy the query-booking.graphql file
-COPY --from=build-stage /app/cmd/EXPO-Outlook-BookingHandler/query-booking.graphql /query-booking.graphql
+COPY --from=build-stage /app/cmd/EXPO-Outlook-BookingHandler/query-booking.graphql ./query-booking.graphql
 
-RUN chown appuser:appgroup /EXPO-Outlook-BookingHandler /query-booking.graphql
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-ENTRYPOINT ["/EXPO-Outlook-BookingHandler"]
+ENTRYPOINT ["/app/EXPO-Outlook-BookingHandler"]

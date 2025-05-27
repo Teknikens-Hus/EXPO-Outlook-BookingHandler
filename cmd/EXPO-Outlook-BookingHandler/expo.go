@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	"github.com/machinebox/graphql"
 	log "github.com/rs/zerolog/log"
 )
@@ -100,7 +101,7 @@ func filterConfirmedBookings(bookings []QueryUserResponseBookingNode) []QueryUse
 	return filteredBookings
 }
 
-func filterBookingWithResource(bookings []QueryUserResponseBookingNode, resourceMaps []ResourceMap) []QueryUserResponseBookingNode {
+func filterBookingWithResource(bookings []QueryUserResponseBookingNode, resourceMaps []cfghelper.ResourceMap) []QueryUserResponseBookingNode {
 	var filteredBookings []QueryUserResponseBookingNode
 	seen := make(map[string]bool)
 	if resourceMaps == nil {

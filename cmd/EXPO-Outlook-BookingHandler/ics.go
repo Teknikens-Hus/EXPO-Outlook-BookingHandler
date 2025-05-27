@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	"github.com/apognu/gocal"
 )
 
-func GetCalendarEventsFromICS(calConfig *CalendarConfig, start, end time.Time) ([]CalendarEvent, error) {
+func GetCalendarEventsFromICS(calConfig *cfghelper.CalendarConfig, start, end time.Time) ([]CalendarEvent, error) {
 	resp, err := http.Get(calConfig.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w for calendar: %s", err, calConfig.Name)

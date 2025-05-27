@@ -8,6 +8,7 @@ import (
 	"time"
 	_ "time/tzdata" // without force loading of timezone data the TZ environment variable is not applied correctly
 
+	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	log "github.com/rs/zerolog/log"
 )
 
@@ -26,35 +27,31 @@ func main() {
 	log.Printf("Timezone set to: %s\n", time.Local)
 	log.Printf("Current time: %s\n", time.Now().Format(time.RFC3339))
 
+	// Get settings from config file
+	cfg, err := cfghelper.Load("config.yaml")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to get settings")
+	}
+
 	// Setup EXPO
 	expoConfig, err := SetupEXPO()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to setup EXPO")
 	}
-	// Get settings from config file
-	settings, err := LoadConfigFile()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get settings")
-	}
-	// Check if we have any calendars to check
-	if settings.ICSConfig.Calendars == nil {
-		log.Print("ICS: No ICS configurations found in the config file")
-		return
-	}
 
-	checkOverlaps(expoConfig, settings)
-	setupTicker(20, expoConfig, settings)
+	checkOverlaps(expoConfig, cfg)
+	setupTicker(20, expoConfig, cfg)
 	// Keep the application running
 	select {}
 }
 
-func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
+func checkOverlaps(expoConfig *EXPOConfig, cfg *cfghelper.Config) {
 	// Get today -1 day and the last day of the month
 	start, end := GetMonthDateRange()
 	// Fetch bookings from EXPO
 	expoBookings := GetNewBookings(expoConfig, start, end)
 	expoBookings = filterConfirmedBookings(expoBookings)
-	expoBookings = filterBookingWithResource(expoBookings, settings.Resources)
+	expoBookings = filterBookingWithResource(expoBookings, cfg.Resources)
 	bookingsURLSuffix := "/administration/bookings/"
 	_, err := url.Parse(expoConfig.EXPOURL + bookingsURLSuffix)
 	if err != nil {
@@ -62,9 +59,9 @@ func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
 		return
 	}
 	// Loop through the calendars and get the events
-	for i, ics := range settings.ICSConfig.Calendars {
+	for i, ics := range cfg.ICS.Calendars {
 		log.Print("Fetching calendar: ", ics.Name)
-		events, err := GetCalendarEventsFromICS(&settings.ICSConfig.Calendars[i], start, end)
+		events, err := GetCalendarEventsFromICS(&cfg.ICS.Calendars[i], start, end)
 		if err != nil {
 			log.Print("ICS: Error getting calendar events: ", err)
 		}
@@ -77,7 +74,7 @@ func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
 			}
 			// Loop through all bookings and check for overlaps with the current event
 			for _, booking := range expoBookings {
-				for _, resourceMap := range settings.Resources {
+				for _, resourceMap := range cfg.Resources {
 					if strings.EqualFold(ics.Name, resourceMap.EXPOResourceName) {
 						//log.Printf("Event %s in calendar %s matches resourceMap %s", event.Summary, ics.Name, resourceMap.EXPOResourceName)
 						doesOverlap, overlapEventName, eventStartTime, eventEndTime := doesBookingResourceOverlap(booking, event.Start, event.End, ics.Name)
@@ -95,7 +92,8 @@ func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
 								event.Start,
 								event.End,
 								ics.Name,
-							}, settings.MailSettings)
+							}, cfg.Email,
+							)
 							break
 						}
 					}
@@ -118,7 +116,7 @@ func GetMonthDateRange() (time.Time, time.Time) {
 	return start, end
 }
 
-func setupTicker(interval int, expoConfig *EXPOConfig, settings *ConfigSettings) {
+func setupTicker(interval int, expoConfig *EXPOConfig, settings *cfghelper.Config) {
 	log.Print("Setting up ticker with interval ", interval, " seconds")
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	go func() {

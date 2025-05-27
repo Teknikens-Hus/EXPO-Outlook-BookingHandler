@@ -3,14 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
+	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	log "github.com/rs/zerolog/log"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
+
+var sentEmailsMutex sync.Mutex
 
 type Overlap struct {
 	resourceName    string
@@ -41,13 +46,22 @@ type CalendarEvent struct {
 	TimeZone   string
 }
 
-func sendEmail(overlap Overlap, mailSettings MailSettings) error {
+func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 	foundRecipient := true
 	email, err := lookupEmail(overlap.icsSummary, &mailSettings)
 	if err != nil {
 		email = mailSettings.FallbackEmail.Address
 		log.Printf("Mail: Error looking up email: %s, sending to fallback: %s", err, email)
 		foundRecipient = false
+	}
+	const sentEmailsFile = "/app/sent_emails.txt"
+	sent, err := hasEmailBeenSent(overlap.icsUID, sentEmailsFile)
+	if err != nil {
+		log.Printf("Mail: Error checking if email has been sent: %v", err)
+	}
+	if sent {
+		log.Printf("Mail: Email for %s already sent, skipping", overlap.icsUID)
+		return nil
 	}
 	log.Printf("Mail: Sending email to: %s from: %s", email, mailSettings.From.Address)
 	from := mail.NewEmail(mailSettings.From.Name, mailSettings.From.Address)
@@ -69,6 +83,7 @@ func sendEmail(overlap Overlap, mailSettings MailSettings) error {
 	if !mailSettings.SendEmails {
 		log.Print("Mail: Not sending email, SendEmails is set to false")
 		log.Printf("Mail: Would have sent email to: %s with subject: %s", email, subject)
+		markEmailAsSent(overlap.icsUID, sentEmailsFile)
 		return nil
 	}
 	APIkey := os.Getenv("SENDGRID_APIKEY")
@@ -77,21 +92,23 @@ func sendEmail(overlap Overlap, mailSettings MailSettings) error {
 	}
 	client := sendgrid.NewSendClient(APIkey)
 	response, err := client.Send(message)
-	if err != nil {
-		log.Print("Mail: Error sending email: ", err)
+	if err != nil || response.StatusCode >= 400 {
+		log.Printf("Mail: Error sending email: %v with statusCode %d", err, response.StatusCode)
 		return err
 	} else {
 		log.Printf("Mail: Email sent to: %s with status code: %d, from %s", email, response.StatusCode, mailSettings.From.Address)
+		markEmailAsSent(overlap.icsUID, sentEmailsFile)
 	}
+
 	return nil
 }
 
-func RegisterOverlap(newOverlap Overlap, mailSettings MailSettings) {
+func RegisterOverlap(newOverlap Overlap, mailSettings cfghelper.MailSettings) {
 	log.Printf(("Got new overlap for EXPO Booking %s in Calendar %s with summary: %s"), newOverlap.expoHumanNumber, newOverlap.icsName, newOverlap.icsSummary)
 	sendEmail(newOverlap, mailSettings)
 }
 
-func lookupEmail(icsSummary string, mailSettings *MailSettings) (string, error) {
+func lookupEmail(icsSummary string, mailSettings *cfghelper.MailSettings) (string, error) {
 	icsSummary = strings.ToLower(strings.ReplaceAll(icsSummary, " ", ""))
 	log.Print("Mail: Looking up email for summary: ", icsSummary)
 	for _, mapping := range mailSettings.Mappings {
@@ -102,4 +119,38 @@ func lookupEmail(icsSummary string, mailSettings *MailSettings) (string, error) 
 		}
 	}
 	return "", fmt.Errorf("no email found for summary: %s", icsSummary)
+}
+
+func hasEmailBeenSent(icsUID string, filename string) (bool, error) {
+	sentEmailsMutex.Lock()
+	defer sentEmailsMutex.Unlock()
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+	var line string
+	for {
+		_, err := fmt.Fscanf(file, "%s\n", &line)
+		if err != nil {
+			if err == io.EOF {
+				return false, nil
+			}
+			return true, fmt.Errorf("error reading file %s: %w", filename, err) // if we have error, lets be safe and not send emails over and over
+		}
+		if line == icsUID {
+			return true, nil
+		}
+	}
+}
+
+func markEmailAsSent(icsUID string, filename string) {
+	sentEmailsMutex.Lock()
+	defer sentEmailsMutex.Unlock()
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	fmt.Fprintln(file, icsUID)
 }
