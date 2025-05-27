@@ -6,11 +6,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata" // without force loading of timezone data the TZ environment variable is not applied correctly
 
 	log "github.com/rs/zerolog/log"
 )
 
 func main() {
+	log.Print("EXPO Outlook BookingHandler starting...")
 	// Manually update timezone from TZ env variable
 	if tz := os.Getenv("TZ"); tz != "" {
 		var err error
@@ -18,6 +20,8 @@ func main() {
 		if err != nil {
 			log.Printf("error loading location '%s': %v\n", tz, err)
 		}
+	} else {
+		log.Print("TZ environment variable not found")
 	}
 	log.Printf("Timezone set to: %s\n", time.Local)
 	log.Printf("Current time: %s\n", time.Now().Format(time.RFC3339))
@@ -39,8 +43,9 @@ func main() {
 	}
 
 	checkOverlaps(expoConfig, settings)
+	setupTicker(20, expoConfig, settings)
 	// Keep the application running
-	//select {}
+	select {}
 }
 
 func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
@@ -50,7 +55,8 @@ func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
 	expoBookings := GetNewBookings(expoConfig, start, end)
 	expoBookings = filterConfirmedBookings(expoBookings)
 	expoBookings = filterBookingWithResource(expoBookings, settings.Resources)
-	bookingURL, err := url.Parse(expoConfig.EXPOURL)
+	bookingsURLSuffix := "/administration/bookings/"
+	_, err := url.Parse(expoConfig.EXPOURL + bookingsURLSuffix)
 	if err != nil {
 		log.Print("Error parsing EXPO URL: ", err)
 		return
@@ -76,7 +82,7 @@ func checkOverlaps(expoConfig *EXPOConfig, settings *ConfigSettings) {
 						//log.Printf("Event %s in calendar %s matches resourceMap %s", event.Summary, ics.Name, resourceMap.EXPOResourceName)
 						doesOverlap, overlapEventName, eventStartTime, eventEndTime := doesBookingResourceOverlap(booking, event.Start, event.End, ics.Name)
 						if doesOverlap {
-							bookingURL := bookingURL.Scheme + "://" + bookingURL.Host + "/administration/bookings/" + strconv.Itoa(booking.ID)
+							bookingURL := expoConfig.EXPOURL + bookingsURLSuffix + strconv.Itoa(booking.ID)
 							RegisterOverlap(Overlap{
 								resourceMap.Name,
 								bookingURL,
@@ -110,4 +116,18 @@ func GetMonthDateRange() (time.Time, time.Time) {
 	log.Print("Start date: ", start)
 	log.Print("End date: ", end)
 	return start, end
+}
+
+func setupTicker(interval int, expoConfig *EXPOConfig, settings *ConfigSettings) {
+	log.Print("Setting up ticker with interval ", interval, " seconds")
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				log.Print(("Ticker triggered, checking overlaps..."))
+				checkOverlaps(expoConfig, settings)
+			}
+		}
+	}()
 }

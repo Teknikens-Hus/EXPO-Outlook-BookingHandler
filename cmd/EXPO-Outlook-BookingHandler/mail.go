@@ -66,6 +66,11 @@ func sendEmail(overlap Overlap, mailSettings MailSettings) error {
 	}
 	plainTextContent := ""
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
+	if !mailSettings.SendEmails {
+		log.Print("Mail: Not sending email, SendEmails is set to false")
+		log.Printf("Mail: Would have sent email to: %s with subject: %s", email, subject)
+		return nil
+	}
 	APIkey := os.Getenv("SENDGRID_APIKEY")
 	if APIkey == "" {
 		return errors.New("SendGrid APIkey is not set")

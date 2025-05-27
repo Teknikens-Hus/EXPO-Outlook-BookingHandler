@@ -19,6 +19,7 @@ ResourceMap:
     EXPOResourceName: "Room 2"
 
 Email:
+  SendEmails: false
   FallbackEmail:
     Address: "mail@mail.com"
     Name: "fallback mail"

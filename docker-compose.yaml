@@ -1,0 +1,7 @@
+services:
+  expo-outlook-bookinghandler:
+    build: .
+    env_file: ".env"
+    volumes:
+      - "./config.yaml:/config.yaml"
+    restart: unless-stopped

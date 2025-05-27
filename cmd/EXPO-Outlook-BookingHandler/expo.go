@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -20,13 +21,13 @@ type EXPOConfig struct {
 func SetupEXPO() (*EXPOConfig, error) {
 	var expoURL string = os.Getenv("EXPO_URL")
 	if expoURL == "" {
-		return nil, errors.New("EXPO_URL is not set")
+		return nil, errors.New("EXPO_URL env variable not set or empty")
 	}
 	log.Print("EXPO_URL: ", expoURL)
 
 	var expoToken string = os.Getenv("EXPO_TOKEN")
 	if expoToken == "" {
-		return nil, errors.New("EXPO_TOKEN is not set")
+		return nil, errors.New("EXPO_TOKEN env variable not set or empty")
 	}
 	log.Print("EXPO_TOKEN: ", expoToken)
 
@@ -36,7 +37,6 @@ func SetupEXPO() (*EXPOConfig, error) {
 		return nil, errors.New("failed to read query file")
 	}
 	query := string(queryFile)
-	log.Print("Query file loaded successfully")
 	return &EXPOConfig{expoURL, expoToken, query}, nil
 }
 
@@ -49,12 +49,17 @@ func GetNewBookings(config *EXPOConfig, startTime time.Time, endTime time.Time) 
 	return expoBookings
 }
 
-func fetchEXPOBooking(url string, query string, startDate time.Time, endDate time.Time, expoToken string) ([]QueryUserResponseBookingNode, error) {
+func fetchEXPOBooking(expoURL string, query string, startDate time.Time, endDate time.Time, expoToken string) ([]QueryUserResponseBookingNode, error) {
 	var allNodes []QueryUserResponseBookingNode
 	var cursor *string
-
-	for {
-		client := graphql.NewClient(url)
+	apiEndpoint := "/api/v3/graphql"
+	_, err := url.Parse(expoURL + apiEndpoint)
+	if err != nil {
+		log.Print("Error parsing EXPO URL: ", err)
+		return nil, err
+	}
+	for { // Infinite loop
+		client := graphql.NewClient(expoURL + apiEndpoint)
 		request := graphql.NewRequest(query)
 		request.Header.Set("Authorization", "Bearer "+expoToken)
 		request.Header.Set("Content-Type", "application/json")
@@ -65,8 +70,9 @@ func fetchEXPOBooking(url string, query string, startDate time.Time, endDate tim
 		}
 
 		var response QueryUserResponse
-		err := client.Run(context.Background(), request, &response)
+		err := client.Run(context.Background(), request, &response) // TODO rewrite in standard http client to handle unauthorized errors better
 		if err != nil {
+			log.Printf("Fetched, but error occurred: %v", err)
 			return nil, err
 		}
 

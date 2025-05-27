@@ -11,7 +11,7 @@ Create on windows using:
 $env:NAME-OF-ENV = "Value of env"
 ```
 
-EXPO_TOKEN
-EXPO_URL
-TZ
-SENDGRID_APIKEY
+EXPO_TOKEN = "Your EXPO auth token" 
+EXPO_URL = "https://booking.yourdomain.com" The base URL to your EXPO booking system
+TZ = "Europe/Stockholm" The timezone to use for the booking dates
+SENDGRID_APIKEY = "Your SendGrid API Key"

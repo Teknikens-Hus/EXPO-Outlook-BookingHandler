@@ -28,6 +28,7 @@ type MailMapping struct {
 }
 
 type MailSettings struct {
+	SendEmails    bool          `yaml:"SendEmails"`
 	Mappings      []MailMapping `yaml:"Mappings"`
 	FallbackEmail MailAddress   `yaml:"FallbackEmail"`
 	From          MailAddress   `yaml:"From"`
