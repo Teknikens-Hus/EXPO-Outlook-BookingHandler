@@ -13,6 +13,9 @@ spec:
   replicas: 1
   strategy:
     type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: expo-outlook-bookinghandler
@@ -21,6 +24,8 @@ spec:
       labels:
         app: expo-outlook-bookinghandler
     spec:
+      securityContext: # Container is build with non-root "appuser"
+        fsGroup: 101 # Makes sure the app can write to the mounted volumes
       containers:
         - image: ghcr.io/teknikens-hus/expo-outlook-bookinghandler:latest
           name: expo-outlook-bookinghandler
@@ -44,22 +49,17 @@ spec:
           # Adjust the resource limits as needed
           resources:
             requests:
-              memory: "128Mi"
+              memory: "20Mi"
               cpu: "10m"
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: "100Mi"
+              cpu: "20m"
           volumeMounts:
             - name: config-volume
               mountPath: /app/config.yaml
               subPath: config.yaml
             - name: data-volume
               mountPath: /app/data
-          # Make sure we run as non-root "app"
-          securityContext:
-            runAsUser: 1001
-            runAsGroup: 2001
-            fsGroup: 2001
       volumes:
         - name: config-volume
           configMap:
