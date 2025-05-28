@@ -1,0 +1,7 @@
+services:
+  expo-outlook-bookinghandler:
+    image: ghcr.io/teknikens-hus/expo-outlook-bookinghandler:latest
+    env_file: ".env"
+    volumes:
+      - "./config.yaml:/app/config.yaml"
+    restart: unless-stopped
