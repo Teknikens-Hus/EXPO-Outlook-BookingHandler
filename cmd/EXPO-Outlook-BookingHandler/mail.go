@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"strings"
@@ -71,12 +73,20 @@ func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 	if foundRecipient {
 		subject = mailSettings.Subject
 		to = mail.NewEmail(overlap.icsSummary, email)
-		htmlContent = fmt.Sprintf("Hej!<br> %s<br>Din bokning av %s<br>%s till %s<br>Överlappar med EXPO bokning <a href=%s target='_blank'>%s</a><br>Överväg en annan lokal eller tid.", overlap.icsSummary, overlap.resourceName, overlap.icsStartTime, overlap.icsEndTime, overlap.expoBookingURL, overlap.expoHumanNumber)
+		htmlContent, err = formatContentHTML(mailSettings.MailContent, overlap)
+		if err != nil {
+			log.Printf("Mail: Error formatting fallback content: %v", err)
+			return err
+		}
 	} else {
 		// Use fallback
 		subject = mailSettings.Subject + " - Fallback"
 		to = mail.NewEmail(mailSettings.FallbackEmail.Name, mailSettings.FallbackEmail.Address)
-		htmlContent = fmt.Sprintf("Hittade inte mail för %s<br> Bokning av %s<br>%s till %s<br>Överlappar med EXPO bokning <a href=%s target='_blank'>%s</a><br>Överväg lägga till personen i Summary->email mappningen för EXPO-Outlook-BookingHandler.", overlap.icsSummary, overlap.resourceName, overlap.icsStartTime, overlap.icsEndTime, overlap.expoBookingURL, overlap.expoHumanNumber)
+		htmlContent, err = formatContentHTML(mailSettings.MailContentFallback, overlap)
+		if err != nil {
+			log.Printf("Mail: Error formatting fallback content: %v", err)
+			return err
+		}
 	}
 	plainTextContent := ""
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
@@ -153,4 +163,24 @@ func markEmailAsSent(icsUID string, filename string) {
 	}
 	defer file.Close()
 	fmt.Fprintln(file, icsUID)
+}
+
+func formatContentHTML(contentTemplate string, overlap Overlap) (string, error) {
+	template, err := template.New("email").Parse(contentTemplate)
+	if err != nil {
+		return fmt.Sprintf("Error parsing content template: %v", err), err
+	}
+	data := map[string]interface{}{
+		"Summary":     overlap.icsSummary,
+		"Resource":    overlap.resourceName,
+		"Start":       overlap.icsStartTime.Format(time.RFC3339),
+		"End":         overlap.icsEndTime.Format(time.RFC3339),
+		"BookingURL":  overlap.expoBookingURL,
+		"HumanNumber": overlap.expoHumanNumber,
+	}
+	var buf bytes.Buffer
+	if err := template.Execute(&buf, data); err != nil {
+		return fmt.Sprintf("Error executing content template: %v", err), err
+	}
+	return buf.String(), nil
 }

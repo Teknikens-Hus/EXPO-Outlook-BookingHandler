@@ -23,11 +23,13 @@ type CalendarConfig struct {
 }
 
 type MailSettings struct {
-	SendEmails    bool          `yaml:"SendEmails"`
-	Mappings      []MailMapping `yaml:"Mappings"`
-	FallbackEmail MailAddress   `yaml:"FallbackEmail"`
-	From          MailAddress   `yaml:"From"`
-	Subject       string        `yaml:"Subject"`
+	SendEmails          bool          `yaml:"SendEmails"`
+	MailContent         string        `yaml:"MailContent"`
+	MailContentFallback string        `yaml:"MailContentFallback"`
+	Mappings            []MailMapping `yaml:"Mappings"`
+	FallbackEmail       MailAddress   `yaml:"FallbackEmail"`
+	From                MailAddress   `yaml:"From"`
+	Subject             string        `yaml:"Subject"`
 }
 
 type MailMapping struct {

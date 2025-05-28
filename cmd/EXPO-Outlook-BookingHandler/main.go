@@ -27,6 +27,14 @@ func main() {
 	log.Printf("Timezone set to: %s\n", time.Local)
 	log.Printf("Current time: %s\n", time.Now().Format(time.RFC3339))
 
+	interval, err := strconv.Atoi(os.Getenv("Interval"))
+	if err != nil {
+		log.Print("Failed to parse Interval environment variable, using default 30 minutes")
+		interval = 1800 // Default interval if not set: 30min
+	} else {
+		log.Print("Interval set to: ", interval, " seconds")
+	}
+
 	// Get settings from config file
 	cfg, err := cfghelper.Load("config.yaml")
 	if err != nil {
@@ -40,7 +48,7 @@ func main() {
 	}
 
 	checkOverlaps(expoConfig, cfg)
-	setupTicker(20, expoConfig, cfg)
+	setupTicker(interval, expoConfig, cfg)
 	// Keep the application running
 	select {}
 }

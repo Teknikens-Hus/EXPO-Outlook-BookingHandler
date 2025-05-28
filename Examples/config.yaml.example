@@ -12,6 +12,26 @@ ICS:
 
 Email:
   SendEmails: false
+  MailContent: |
+    <html>
+    <body>
+      <p>Hello! {{.Summary}}</p>
+      <p>Your booking of {{.Resource}}</p>
+      <p>{{.Start}} to {{.End}}</p>
+      <p>Overlaps with EXPO booking <a href="{{.BookingURL}}">{{.HumanNumber}}</a></p>
+      <p>Consider an alternative room or time.</p>
+    </body>
+    </html>
+  MailContentFallback: |
+    <html>
+    <body>
+      <p>Email not found for {{.Summary}}</p>
+      <p>Booking of {{.Resource}}</p>
+      <p>{{.Start}} to {{.End}}</p>
+      <p>Overlaps with EXPO booking <a href="{{.BookingURL}}">{{.HumanNumber}}</a></p>
+      <p>Consider adding the person in the Summary->email mapping for EXPO-Outlook-BookingHandler.</p>
+    </body>
+    </html>
   FallbackEmail:
     Address: "mail@mail.com"
     Name: "fallback mail"
