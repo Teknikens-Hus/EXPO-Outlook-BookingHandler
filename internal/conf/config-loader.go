@@ -8,9 +8,8 @@ import (
 )
 
 type Config struct {
-	ICS       ICSConfig     `yaml:"ICS"`
-	Email     MailSettings  `yaml:"Email"`
-	Resources []ResourceMap `yaml:"ResourceMap"`
+	ICS   ICSConfig    `yaml:"ICS"`
+	Email MailSettings `yaml:"Email"`
 }
 
 type ICSConfig struct {
@@ -18,8 +17,9 @@ type ICSConfig struct {
 }
 
 type CalendarConfig struct {
-	Name string `yaml:"Name"`
-	URL  string `yaml:"URL"`
+	Name             string `yaml:"Name"`
+	URL              string `yaml:"URL"`
+	EXPOResourceName string `yaml:"EXPOResourceName"`
 }
 
 type MailSettings struct {
@@ -40,12 +40,6 @@ type MailAddress struct {
 	Name    string `yaml:"Name"`
 }
 
-type ResourceMap struct {
-	Name             string `yaml:"Name"`
-	LinkedCalName    string `yaml:"LinkedCalName"`
-	EXPOResourceName string `yaml:"EXPOResourceName"`
-}
-
 func Load(filePath string) (*Config, error) {
 	buf, err := os.ReadFile(filePath)
 	if err != nil {
@@ -62,9 +56,6 @@ func Load(filePath string) (*Config, error) {
 	}
 	if config.Email.FallbackEmail.Address == "" {
 		return nil, fmt.Errorf("fallback email address is not set in the config file")
-	}
-	if len(config.Resources) == 0 {
-		return nil, fmt.Errorf("no resource mappings found in the config file")
 	}
 	if config.Email.From.Address == "" {
 		return nil, fmt.Errorf("from email address is not set in the config file")

@@ -48,10 +48,14 @@ func main() {
 func checkOverlaps(expoConfig *EXPOConfig, cfg *cfghelper.Config) {
 	// Get today -1 day and the last day of the month
 	start, end := GetMonthDateRange()
+	var monitoredResources []string
+	for _, cal := range cfg.ICS.Calendars {
+		monitoredResources = append(monitoredResources, cal.EXPOResourceName)
+	}
 	// Fetch bookings from EXPO
 	expoBookings := GetNewBookings(expoConfig, start, end)
 	expoBookings = filterConfirmedBookings(expoBookings)
-	expoBookings = filterBookingWithResource(expoBookings, cfg.Resources)
+	expoBookings = filterBookingWithResource(expoBookings, monitoredResources)
 	bookingsURLSuffix := "/administration/bookings/"
 	_, err := url.Parse(expoConfig.EXPOURL + bookingsURLSuffix)
 	if err != nil {
@@ -74,14 +78,14 @@ func checkOverlaps(expoConfig *EXPOConfig, cfg *cfghelper.Config) {
 			}
 			// Loop through all bookings and check for overlaps with the current event
 			for _, booking := range expoBookings {
-				for _, resourceMap := range cfg.Resources {
-					if strings.EqualFold(ics.Name, resourceMap.EXPOResourceName) {
+				for _, monitoredResource := range monitoredResources {
+					if strings.EqualFold(ics.Name, monitoredResource) {
 						//log.Printf("Event %s in calendar %s matches resourceMap %s", event.Summary, ics.Name, resourceMap.EXPOResourceName)
 						doesOverlap, overlapEventName, eventStartTime, eventEndTime := doesBookingResourceOverlap(booking, event.Start, event.End, ics.Name)
 						if doesOverlap {
 							bookingURL := expoConfig.EXPOURL + bookingsURLSuffix + strconv.Itoa(booking.ID)
 							RegisterOverlap(Overlap{
-								resourceMap.Name,
+								monitoredResource,
 								bookingURL,
 								booking.HumanNumber,
 								overlapEventName,

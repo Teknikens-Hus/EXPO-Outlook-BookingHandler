@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	"github.com/machinebox/graphql"
 	log "github.com/rs/zerolog/log"
 )
@@ -101,11 +100,11 @@ func filterConfirmedBookings(bookings []QueryUserResponseBookingNode) []QueryUse
 	return filteredBookings
 }
 
-func filterBookingWithResource(bookings []QueryUserResponseBookingNode, resourceMaps []cfghelper.ResourceMap) []QueryUserResponseBookingNode {
+func filterBookingWithResource(bookings []QueryUserResponseBookingNode, monitoredResourceNames []string) []QueryUserResponseBookingNode {
 	var filteredBookings []QueryUserResponseBookingNode
 	seen := make(map[string]bool)
-	if resourceMaps == nil {
-		log.Print("No resource maps found, returning all bookings")
+	if len(monitoredResourceNames) == 0 {
+		log.Print("No monitored resource names found, returning all bookings")
 		return bookings
 	}
 	for _, booking := range bookings {
@@ -113,8 +112,8 @@ func filterBookingWithResource(bookings []QueryUserResponseBookingNode, resource
 			if reservation.Reservationable != nil {
 				if reservation.Reservationable.Event.EventAllocation.EventAllocationResources.TotalNodeCount > 0 {
 					for _, resource := range reservation.Reservationable.Event.EventAllocation.EventAllocationResources.Nodes {
-						for _, resourceMap := range resourceMaps {
-							if strings.EqualFold(resource.Resource.Name, resourceMap.EXPOResourceName) {
+						for _, monResource := range monitoredResourceNames {
+							if strings.EqualFold(resource.Resource.Name, monResource) {
 								if !seen[booking.HumanNumber] {
 									filteredBookings = append(filteredBookings, booking)
 									seen[booking.HumanNumber] = true

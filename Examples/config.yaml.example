@@ -2,21 +2,13 @@ ICS:
   Calendars:
     - Name: "Calendar1"
       URL: "https://outlook.office365.com/owa/calendar/../calendar.ics"
+      EXPOResourceName: "Room 1"
     - Name: "Calendar2"
       URL: "https://outlook.office365.com/owa/calendar/.../calendar.ics"
+      EXPOResourceName: "Room 2"
     - Name: "Calendar3"
       URL: "https://outlook.office365.com/owa/calendar/.../calendar.ics"
-
-ResourceMap:
-  - Name: "Calendar1"
-    LinkedCalName: "Room1"
-    EXPOResourceName: "Room1"
-  - Name: "Calendar2"
-    LinkedCalName: "Room2"
-    EXPOResourceName: "Room2"
-  - Name: "Calendar3"
-    LinkedCalName: "Room2"
-    EXPOResourceName: "Room 2"
+      EXPOResourceName: "Room 3"
 
 Email:
   SendEmails: false
