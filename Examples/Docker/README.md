@@ -8,9 +8,12 @@ services:
     env_file: ".env"
     volumes:
       - "./config.yaml:/app/config.yaml"
+      - "./appdata:/app/data"
     restart: unless-stopped
 ```
 Adjust the values in the config.yaml.example file and then rename it to config.yaml
+
+The datavolume stores the text file that keeps track of the sent emails, so if the container is restarted, it will not send the same emails again.
 
 To see options for the config file, check the main [README.md](../../README.md)
 

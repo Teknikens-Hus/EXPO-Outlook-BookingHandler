@@ -56,7 +56,7 @@ func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 		log.Printf("Mail: Error looking up email: %s, sending to fallback: %s", err, email)
 		foundRecipient = false
 	}
-	const sentEmailsFile = "/app/sent_emails.txt"
+	const sentEmailsFile = "/app/data/sent_emails.txt"
 	sent, err := hasEmailBeenSent(overlap.icsUID, sentEmailsFile)
 	if err != nil {
 		log.Printf("Mail: Error checking if email has been sent: %v", err)

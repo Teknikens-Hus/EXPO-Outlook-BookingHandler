@@ -3,5 +3,6 @@
 
 **config.yaml
 **.ics
+**sent_emails.txt
 docker-compose.yaml
 .gitignore
