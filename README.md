@@ -63,3 +63,7 @@ export NAME-OF-ENV="Value of env"
 3. Create a .env file in the root of the project next to the docker-compose.yaml file with the same required values explained above.
 4. Create a config.yaml file in the root of the project with the required values.
 5. Run `docker-compose up --build` to start the application.
+
+## Release new version
+Make sure code works.
+Increment the version in the version.txt and push. Github actions will automatically build and push the new version to the gha registry.

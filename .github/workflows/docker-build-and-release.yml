@@ -1,0 +1,62 @@
+name: docker-build-and-release
+
+permissions:
+  packages: write
+  contents: write # Required to create release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/EXPO-Outlook-BookingHandler/version.txt'
+env:
+  REGISTRY_IMAGE: teknikens-hus/expo-outlook-bookinghandler
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Get version number
+        id: version
+        run: echo "version=$(cat cmd/EXPO-Outlook-BookingHandler/version.txt)" >> $GITHUB_OUTPUT
+
+      
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/${{ env.REGISTRY_IMAGE }}:latest
+            ghcr.io/${{ env.REGISTRY_IMAGE }}:${{ steps.version.outputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

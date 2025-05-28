@@ -13,7 +13,12 @@ import (
 )
 
 func main() {
-	log.Print("EXPO Outlook BookingHandler starting...")
+	// Get app version from version.txt
+	version, err := os.ReadFile("version.txt")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to read version file")
+	}
+	log.Printf("EXPO Outlook BookingHandler version: %s is starting...", version)
 	// Manually update timezone from TZ env variable
 	if tz := os.Getenv("TZ"); tz != "" {
 		var err error

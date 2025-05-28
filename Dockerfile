@@ -26,6 +26,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=build-stage /EXPO-Outlook-BookingHandler ./EXPO-Outlook-BookingHandler
 # Copy the query-booking.graphql file
 COPY --from=build-stage /app/cmd/EXPO-Outlook-BookingHandler/query-booking.graphql ./query-booking.graphql
+COPY --from=build-stage /app/cmd/EXPO-Outlook-BookingHandler/version.txt ./version.txt
 
 RUN chown -R appuser:appgroup /app
 
