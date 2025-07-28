@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"net/smtp"
+
 	cfghelper "github.com/Teknikens-Hus/EXPO-Outlook-BookingHandler/internal/conf"
 	log "github.com/rs/zerolog/log"
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 var sentEmailsMutex sync.Mutex
@@ -50,10 +50,10 @@ type CalendarEvent struct {
 
 func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 	foundRecipient := true
-	email, err := lookupEmail(overlap.icsSummary, &mailSettings)
+	toAddress, err := lookupEmail(overlap.icsSummary, &mailSettings)
 	if err != nil {
-		email = mailSettings.FallbackEmail.Address
-		log.Printf("Mail: Error looking up email: %s, sending to fallback: %s", err, email)
+		toAddress = mailSettings.FallbackEmail.Address
+		log.Printf("Mail: Error looking up email: %s, sending to fallback: %s", err, toAddress)
 		foundRecipient = false
 	}
 	const sentEmailsFile = "/app/data/sent_emails.txt"
@@ -65,14 +65,10 @@ func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 		log.Printf("Mail: Email for %s already sent, skipping", overlap.icsUID)
 		return nil
 	}
-	log.Printf("Mail: Sending email to: %s from: %s", email, mailSettings.From.Address)
-	from := mail.NewEmail(mailSettings.From.Name, mailSettings.From.Address)
 	var subject string
-	var to *mail.Email
 	var htmlContent string
 	if foundRecipient {
 		subject = mailSettings.Subject
-		to = mail.NewEmail(overlap.icsSummary, email)
 		htmlContent, err = formatContentHTML(mailSettings.MailContent, overlap)
 		if err != nil {
 			log.Printf("Mail: Error formatting fallback content: %v", err)
@@ -80,33 +76,54 @@ func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 		}
 	} else {
 		// Use fallback
-		subject = mailSettings.Subject + " - Fallback"
-		to = mail.NewEmail(mailSettings.FallbackEmail.Name, mailSettings.FallbackEmail.Address)
+		subject = mailSettings.Subject + "-Fallback"
 		htmlContent, err = formatContentHTML(mailSettings.MailContentFallback, overlap)
 		if err != nil {
 			log.Printf("Mail: Error formatting fallback content: %v", err)
 			return err
 		}
 	}
-	plainTextContent := ""
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
+	headers := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";"
+	message := "From: " + mailSettings.From.Address + "\r\n" +
+		"To: " + toAddress + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		headers + "\r\n" +
+		"\r\n" +
+		htmlContent
 	if !mailSettings.SendEmails {
 		log.Print("Mail: Not sending email, SendEmails is set to false")
-		log.Printf("Mail: Would have sent email to: %s with subject: %s", email, subject)
+		log.Printf("Mail: Would have sent email to: %s with subject: %s", toAddress, subject)
 		markEmailAsSent(overlap.icsUID, sentEmailsFile)
 		return nil
 	}
-	APIkey := os.Getenv("SENDGRID_APIKEY")
-	if APIkey == "" {
-		return errors.New("SendGrid APIkey is not set")
+	SMTP_Password := os.Getenv("SMTP_PASSWORD")
+	if SMTP_Password == "" {
+		return errors.New("SMTP Password is not set")
 	}
-	client := sendgrid.NewSendClient(APIkey)
-	response, err := client.Send(message)
-	if err != nil || response.StatusCode >= 400 {
-		log.Printf("Mail: Error sending email: %v with statusCode %d", err, response.StatusCode)
+	SMTP_USERNAME := os.Getenv("SMTP_USERNAME")
+	if SMTP_USERNAME == "" {
+		return errors.New("SMTP Username is not set")
+	}
+	SMTP_HOST := os.Getenv("SMTP_HOST")
+	if SMTP_HOST == "" {
+		return errors.New("SMTP Host is not set")
+	}
+	SMTP_PORT := os.Getenv("SMTP_PORT") // Default to 587
+	if SMTP_PORT == "" {
+		SMTP_PORT = "587"
+	}
+	auth := smtp.PlainAuth(
+		"",
+		SMTP_USERNAME,
+		SMTP_Password,
+		SMTP_HOST)
+	log.Printf("Mail: Sending email to: %s from: %s using: %s", toAddress, mailSettings.From.Address, SMTP_HOST)
+	err = smtp.SendMail(fmt.Sprintf("%s:%s", SMTP_HOST, SMTP_PORT), auth, mailSettings.From.Address, []string{toAddress}, []byte(message))
+	if err != nil {
+		log.Printf("Mail: Error sending email: %v", err)
 		return err
 	} else {
-		log.Printf("Mail: Email sent to: %s with status code: %d, from %s", email, response.StatusCode, mailSettings.From.Address)
+		log.Printf("Mail: Email sent to: %s, from %s", toAddress, mailSettings.From.Address)
 		markEmailAsSent(overlap.icsUID, sentEmailsFile)
 	}
 
@@ -115,7 +132,10 @@ func sendEmail(overlap Overlap, mailSettings cfghelper.MailSettings) error {
 
 func RegisterOverlap(newOverlap Overlap, mailSettings cfghelper.MailSettings) {
 	log.Printf(("Got new overlap for EXPO Booking %s in Calendar %s with summary: %s"), newOverlap.expoHumanNumber, newOverlap.icsName, newOverlap.icsSummary)
-	sendEmail(newOverlap, mailSettings)
+	err := sendEmail(newOverlap, mailSettings)
+	if err != nil {
+		log.Printf("Error sending email for overlap: %v", err)
+	}
 }
 
 func lookupEmail(icsSummary string, mailSettings *cfghelper.MailSettings) (string, error) {

@@ -26,9 +26,12 @@ You can find an example config file in the [Examples](./Examples/config.yaml.exa
 |------------|-----------------------------------------------------------------------------|----------------------------------------|
 | EXPO_TOKEN   | Your EXPO API Token                            | ``d651vgdexnt55jzu5rnxiwak1u8x3oxjd93jx3j9xj39r4g1ao``            |
 | EXPO_URL   | The base URL to your booking site                  | `https://booking.yourdomain.com`                     |
-| SENDGRID_APIKEY   | Your SENDGRID API key/token for sending emails              | `SG.FyPKF5yJOGN3NgkhoQjcPQ.AEXptgkU9ogAYtULgOh_B_NJJu-i1b2a3k4c7d8f9g`                             |
+| SMTP_PASSWORD   | Your SMTP password for sending emails              | `Password123 or apikey`                             |
+| SMTP_USERNAME   | Your SMTP username for sending emails              | `Username123`                             |
+| SMTP_HOST   | Your SMTP host for sending emails              | `smtp.yourdomain.com`                             |
+| SMTP_PORT   | Your SMTP port for sending emails              | `default is 587 if not specified`                             |
 | TZ   | Your [TZ identifier](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for your timezone                      | `Europe/Stockholm`                             |
- Interval   | The interval in seconds at which the overlap check is performed                   | `1800`
+| Interval   | The interval in seconds at which the overlap check is performed                   | `1800`
 
 Please note these are example keys/tokens, not actual values you should use or that are valid. 
 

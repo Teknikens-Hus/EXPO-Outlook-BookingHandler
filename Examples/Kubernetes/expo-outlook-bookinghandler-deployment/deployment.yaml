@@ -36,11 +36,26 @@ spec:
                   key: expo_token
             - name: EXPO_URL
               value: "https://booking.yourdomain.com"
-            - name: SENDGRID_APIKEY
+            - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: expo-outlook-bookinghandler-secret
-                  key: sendgrid_apikey
+                  key: smtp_password
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: expo-outlook-bookinghandler-secret
+                  key: smtp_username
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: expo-outlook-bookinghandler-secret
+                  key: smtp_host
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: expo-outlook-bookinghandler-secret
+                  key: smtp_port
           # Adjust the resource limits as needed
           resources:
             requests:
